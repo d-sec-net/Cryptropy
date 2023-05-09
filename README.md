@@ -52,7 +52,7 @@ Decryption is handled by systemfunction033 and extracts the key from the payload
 ```
 FinalSize = ((OriginalSize + BUFF_SIZE - OriginalSize % BUFF_SIZE ) / BUFF_SIZE) * (BUFF_SIZE + NULL_BYTES + sizeof(INT))
 ```
-- The [PoC](https://github.com/Maldev-Academy/EntropyReducer/tree/main/PoC) project in this repo is used to execute the `".ER"` file generated as an example of deserializing and deobfuscating it.
+- The [PoC](https://github.com/Maldev-Academy/EntropyReducer/tree/main/PoC) project in this repo is used to execute the `".ER"` file generated as an example of deserializing and deobfuscating it. Just use xxd -i to add the encrypted and obfuscated shellcode to the payload.h file. 
 
 <br>
 
