@@ -5,6 +5,8 @@
 #include "EntropyReducer.h"
 
 
+
+
 struct LINKED_LIST;
 typedef struct _LINKED_LIST
 {
@@ -25,6 +27,31 @@ typedef enum SORT_TYPE {
     SORT_BY_ID,
     SORT_BY_BUFFER
 };
+
+
+VOID PrintList(IN PLINKED_LIST LinkedList) {
+
+    PLINKED_LIST pTmpHead = (PLINKED_LIST)LinkedList;
+    if (!pTmpHead)
+        return;
+
+    while (pTmpHead != NULL) {
+
+        printf("\t>>> ");
+        for (int i = 0; i < BUFF_SIZE; i++) {
+            printf("0x%0.2X ", pTmpHead->pBuffer[i]);
+        }
+        printf("\t(%0.2d)\n", pTmpHead->ID);
+
+        printf("\t\t>>> ");
+        for (int i = 0; i < NULL_BYTES; i++) {
+            printf("0x%0.2X ", pTmpHead->pNull[i]);
+        }
+
+        printf("\n\n");
+        pTmpHead = pTmpHead->Next;
+    }
+}
 
 
 // set the 'sPayloadSize' variable to be equal to the next nearest number that is multiple of 'N'
@@ -139,23 +166,21 @@ void Split(PLINKED_LIST top, PLINKED_LIST* front, PLINKED_LIST* back) {
 PLINKED_LIST Merge(PLINKED_LIST top1, PLINKED_LIST top2, enum SORT_TYPE eType) {
     if (top1 == NULL)
         return top2;
-    else
-        if (top2 == NULL)
-            return top1;
+    else if (top2 == NULL)
+        return top1;
 
     PLINKED_LIST pnt = NULL;
+    PLINKED_LIST current = NULL;
 
     int iValue1 = 0;
     int iValue2 = 0;
 
     switch (eType) {
-        // this is used to deobfuscate
     case SORT_BY_ID: {
         iValue1 = (int)top1->ID;
         iValue2 = (int)top2->ID;
         break;
     }
-                   // this is used to obfuscate
     case SORT_BY_BUFFER: {
         iValue1 = (int)(top1->pBuffer[0] ^ top1->pBuffer[1] ^ top1->pBuffer[2]);   // calculating a value from the payload buffer chunk
         iValue2 = (int)(top2->pBuffer[0] ^ top2->pBuffer[1] ^ top2->pBuffer[2]);   // calculating a value from the payload buffer chunk
@@ -166,15 +191,49 @@ PLINKED_LIST Merge(PLINKED_LIST top1, PLINKED_LIST top2, enum SORT_TYPE eType) {
     }
     }
 
-    /* pick either top1 or top2, and merge them */
     if (iValue1 <= iValue2) {
         pnt = top1;
-        pnt->Next = Merge(top1->Next, top2, eType);
+        top1 = top1->Next;
     }
     else {
         pnt = top2;
-        pnt->Next = Merge(top1, top2->Next, eType);
+        top2 = top2->Next;
     }
+    current = pnt;
+
+    while (top1 != NULL && top2 != NULL) {
+        switch (eType) {
+        case SORT_BY_ID: {
+            iValue1 = (int)top1->ID;
+            iValue2 = (int)top2->ID;
+            break;
+        }
+        case SORT_BY_BUFFER: {
+            iValue1 = (int)(top1->pBuffer[0] ^ top1->pBuffer[1] ^ top1->pBuffer[2]);   // calculating a value from the payload buffer chunk
+            iValue2 = (int)(top2->pBuffer[0] ^ top2->pBuffer[1] ^ top2->pBuffer[2]);   // calculating a value from the payload buffer chunk
+            break;
+        }
+        default: {
+            return NULL;
+        }
+        }
+
+        if (iValue1 <= iValue2) {
+            current->Next = top1;
+            top1 = top1->Next;
+        }
+        else {
+            current->Next = top2;
+            top2 = top2->Next;
+        }
+        current = current->Next;
+    }
+
+    if (top1 == NULL)
+        current->Next = top2;
+    else if (top2 == NULL)
+        current->Next = top1;
+
     return pnt;
 }
 
@@ -202,22 +261,23 @@ VOID MergeSort(PLINKED_LIST* top, enum SORT_TYPE eType) {
 //------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-BOOL Deobfuscate(IN PBYTE pFuscatedBuff, IN SIZE_T sFuscatedSize, OUT PBYTE* ptPayload, OUT PSIZE_T psSize) 
+BOOL Deobfuscate(IN PBYTE pFuscatedBuff, IN SIZE_T sFuscatedSize, OUT PBYTE* ptPayload, OUT PSIZE_T psSize)
 {
     PLINKED_LIST	pLinkedList = NULL;
 
     // deserialize (from buffer to linked list - this must be done to re-order the payload's bytes)
+
     for (size_t i = 0; i < sFuscatedSize; i++) {
         if (i % SERIALIZED_SIZE == 0)
             pLinkedList = InsertAtTheEnd(pLinkedList, &pFuscatedBuff[i], *(int*)&pFuscatedBuff[i + BUFF_SIZE + NULL_BYTES]);
+            //printf("Byte...: 0x%02X\n", pFuscatedBuff[i + BUFF_SIZE + NULL_BYTES]);
     }
-
+    //PrintList(pLinkedList);
     // re-ordering the payload's bytes
     MergeSort(&pLinkedList, SORT_BY_ID);
 
     PLINKED_LIST	pTmpHead = pLinkedList;
     SIZE_T			BufferSize = NULL;
-    PBYTE			BufferBytes = (PBYTE)LocalAlloc(LPTR, BUFF_SIZE);
     unsigned int	x = 0x00;
 
     while (pTmpHead != NULL) {
@@ -229,39 +289,34 @@ BOOL Deobfuscate(IN PBYTE pFuscatedBuff, IN SIZE_T sFuscatedSize, OUT PBYTE* ptP
 
         BufferSize += BUFF_SIZE;
 
-        // reallocating to fit the new buffer
-        if (BufferBytes != NULL) {
-            BufferBytes = (PBYTE)LocalReAlloc(BufferBytes, BufferSize, LMEM_MOVEABLE | LMEM_ZEROINIT);
-            memcpy((PVOID)(BufferBytes + (BufferSize - BUFF_SIZE)), TmpBuffer, BUFF_SIZE);
-        }
+        // copy the buffer to the original memory location
+        memcpy((PVOID)(pFuscatedBuff + (BufferSize - BUFF_SIZE)), TmpBuffer, BUFF_SIZE);
 
         pTmpHead = pTmpHead->Next;
         x++; // number if nodes
     }
 
-    *ptPayload = BufferBytes;  // payload base address 
+    *ptPayload = pFuscatedBuff;  // payload base address 
     *psSize = x * BUFF_SIZE; // payload size
-
 
     // free linked list's nodes
     pTmpHead = pLinkedList;
     PLINKED_LIST pTmpHead2 = pTmpHead->Next;
-    
+
     while (pTmpHead2 != NULL) {
 
         if (!HeapFree(GetProcessHeap(), 0, (PVOID)pTmpHead)) {
             // failed
         }
-        pTmpHead    = pTmpHead2;
-        pTmpHead2   = pTmpHead2->Next;
+        pTmpHead = pTmpHead2;
+        pTmpHead2 = pTmpHead2->Next;
     }
-  
-
 
     if (*ptPayload != NULL && *psSize < sFuscatedSize)
         return 1;
     else
         return 0;
 }
+
 
 
