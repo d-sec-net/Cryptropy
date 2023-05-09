@@ -137,7 +137,7 @@ int main(int argc, char* argv[]) {
 
 	GenerateBytes(_key, KEY_SIZE);
 
-	printf("[i] The Generate Key Bytes: [ ");
+	printf("[i] The Key Bytes: [ ");
 	for (size_t i = 0; i < KEY_SIZE; i++)
 		printf("%02X ", _key[i]);
 	printf("]\n");
@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
 
 	SystemFunction033(&_data, &key);
 
-	printf("[+] Payload Encrypted with RC4.");
+	printf("[+] Payload Encrypted with RC4.\n");
 
 	SIZE_T	sNewPayloadSize = (SIZE_T)(RawPayloadSize + KEY_SIZE);
 	PVOID	pNewPayloadData = malloc(sNewPayloadSize);
@@ -178,14 +178,14 @@ int main(int argc, char* argv[]) {
 	memcpy(pNewPayloadData, _key, KEY_SIZE);
 	memcpy((PVOID)((ULONG_PTR)pNewPayloadData + KEY_SIZE), ShellcodeBuffer, RawPayloadSize);
 
-	printf("[+] Key added to the payload blob.");
+	printf("[+] Key added to the payload blob.\n");
 
 	SIZE_T	ObfuscatedPayloadSize		= NULL;
 	PBYTE	ObfuscatedPayloadBuffer		= NULL;
 
 
 
-	printf("[i] Obfuscating Payload to reduce entropy ... ");
+	printf("[i] Obfuscating Payload to reduce entropy...\n");
 	if (!Obfuscate((PBYTE)pNewPayloadData, sNewPayloadSize, &ObfuscatedPayloadBuffer, &ObfuscatedPayloadSize)) {
 		return -1;
 	}
@@ -193,7 +193,7 @@ int main(int argc, char* argv[]) {
 	printf("\t>>> Obfuscated Payload Size : %ld \n\t>>> Obfuscated Payload Located At : 0x%p \n", ObfuscatedPayloadSize, ObfuscatedPayloadBuffer);
 
 
-	printf("[i] Writing The Obfuscated Payload ...");
+	printf("[i] Writing The Obfuscated Payload ...\n");
 	if (!WritePayloadFile(argv[1], ObfuscatedPayloadBuffer, ObfuscatedPayloadSize)) {
 		return -1;
 	}

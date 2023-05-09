@@ -1,6 +1,4 @@
 #pragma once
 
-#pragma once
-
-//Your Shellcode go ere.
-unsigned char Payload[] = { };
+//Your shellcode goes here...
+unsigned char Payload[] = { 0x00 };

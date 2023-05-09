@@ -9,7 +9,7 @@
 // these values should be the same as 'EntropyReducer.exe'
 // if you modified them there, you need to modify these here as well
 #define BUFF_SIZE				0x04			
-#define NULL_BYTES				0x01			
+#define NULL_BYTES				0x06			
 
 
 // Deobfuscate the payload
@@ -21,3 +21,6 @@ BOOL Deobfuscate(IN PBYTE pFuscatedBuff, IN SIZE_T sFuscatedSize, OUT PBYTE* ptP
 
 
 #endif // !HELPER_H
+
+
+
