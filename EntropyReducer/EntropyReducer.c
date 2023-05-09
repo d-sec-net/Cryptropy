@@ -9,7 +9,7 @@
 // - ppLinkedList: pointer to a LINKED_LIST structure, that will represent the head of the linked list
 BOOL InitializePayloadList(IN PBYTE pPayload, IN OUT PSIZE_T sPayloadSize, OUT PLINKED_LIST* ppLinkedList)
 {
-
+    printf("1.");
     // variable used to count the linked list elements (used to calculate the final size)
     // it is also used as the node's ID
     unsigned int x = 0;
@@ -53,6 +53,7 @@ BOOL InitializePayloadList(IN PBYTE pPayload, IN OUT PSIZE_T sPayloadSize, OUT P
 // - ID: the id of the node 
 PLINKED_LIST InsertAtTheEnd(IN OUT PLINKED_LIST LinkedList, IN PBYTE pBuffer, IN INT ID)
 {
+
 
     // new tmp pointer, pointing to the head of the linked list
     PLINKED_LIST pTmpHead = (PLINKED_LIST)LinkedList;
@@ -112,23 +113,21 @@ void Split(PLINKED_LIST top, PLINKED_LIST* front, PLINKED_LIST* back) {
 PLINKED_LIST Merge(PLINKED_LIST top1, PLINKED_LIST top2, enum SORT_TYPE eType) {
     if (top1 == NULL)
         return top2;
-    else
-        if (top2 == NULL)
-            return top1;
+    else if (top2 == NULL)
+        return top1;
 
     PLINKED_LIST pnt = NULL;
+    PLINKED_LIST current = NULL;
 
     int iValue1 = 0;
     int iValue2 = 0;
 
     switch (eType) {
-        // this is used to deobfuscate
     case SORT_BY_ID: {
         iValue1 = (int)top1->ID;
         iValue2 = (int)top2->ID;
         break;
     }
-                   // this is used to obfuscate
     case SORT_BY_BUFFER: {
         iValue1 = (int)(top1->pBuffer[0] ^ top1->pBuffer[1] ^ top1->pBuffer[2]);   // calculating a value from the payload buffer chunk
         iValue2 = (int)(top2->pBuffer[0] ^ top2->pBuffer[1] ^ top2->pBuffer[2]);   // calculating a value from the payload buffer chunk
@@ -139,18 +138,51 @@ PLINKED_LIST Merge(PLINKED_LIST top1, PLINKED_LIST top2, enum SORT_TYPE eType) {
     }
     }
 
-    /* pick either top1 or top2, and merge them */
     if (iValue1 <= iValue2) {
         pnt = top1;
-        pnt->Next = Merge(top1->Next, top2, eType);
+        top1 = top1->Next;
     }
     else {
         pnt = top2;
-        pnt->Next = Merge(top1, top2->Next, eType);
+        top2 = top2->Next;
     }
+    current = pnt;
+
+    while (top1 != NULL && top2 != NULL) {
+        switch (eType) {
+        case SORT_BY_ID: {
+            iValue1 = (int)top1->ID;
+            iValue2 = (int)top2->ID;
+            break;
+        }
+        case SORT_BY_BUFFER: {
+            iValue1 = (int)(top1->pBuffer[0] ^ top1->pBuffer[1] ^ top1->pBuffer[2]);   // calculating a value from the payload buffer chunk
+            iValue2 = (int)(top2->pBuffer[0] ^ top2->pBuffer[1] ^ top2->pBuffer[2]);   // calculating a value from the payload buffer chunk
+            break;
+        }
+        default: {
+            return NULL;
+        }
+        }
+
+        if (iValue1 <= iValue2) {
+            current->Next = top1;
+            top1 = top1->Next;
+        }
+        else {
+            current->Next = top2;
+            top2 = top2->Next;
+        }
+        current = current->Next;
+    }
+
+    if (top1 == NULL)
+        current->Next = top2;
+    else if (top2 == NULL)
+        current->Next = top1;
+
     return pnt;
 }
-
 
 // the main sorting function
 // - pLinkedList : is the head node of the linked list
@@ -169,4 +201,6 @@ VOID MergeSort(PLINKED_LIST* top, enum SORT_TYPE eType) {
 
         *top = Merge(a, b, eType);				/* (combine) merge the two sorted lists together */
     }
+
+
 }
