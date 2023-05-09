@@ -1,7 +1,10 @@
-<h2 align="center"> EntropyReducer: Reduce The Entropy Of Youre Payload And Obfuscate It With Serialized Linked Lists </h2>
+<h2 align="center"> Cryptropy: Reduce The Entropy Of your encrypted payloads And Obfuscate It With Serialized Linked Lists </h2>
 
 <br>
 
+Shamelessly stolen and modified by tzar based on the original "[Entropy Reducer](https://github.com/Maldev-Academy/EntropyReducer)" by @NULL and @mrd0x, I just slapped on some stickers. Functionality of the POC and generator have now been modified to rc4 encrypt the shellcode before running entropy reducer. The POC also uses a few basic NT calls I needed for testing and deobfuscates and decrypts the payload from a memory location. The PoC is exactly that and doesnt clean up after itself so bare that in mind if modifying for a normal payload. Yes encrypting and then applying this entropy reduction method may make your payloads a lot bigger, user caution is advised, tested with Cobalt strike stageless payloads, reducing and encrypted blob from 7.9 to around 3 with a 3mb payload... so its not quite go binary sized but it still chunky.
+
+<br>
 
 ### How Does It Work
 
@@ -34,6 +37,11 @@
 - Next step is to sort the linked list using the node's Id, which is done using the same [Merge Sort Algorithm](https://github.com/Maldev-Academy/EntropyReducer/blob/main/PoC/EntropyReducer.c#L216) used before.
 - Now, the linked list is in the right order to re-construct the payload's bytes as they should. So we simply strip the payload's original bytes from each node, as done [here](https://github.com/Maldev-Academy/EntropyReducer/blob/main/PoC/EntropyReducer.c#L223).
 - Last step is to free the allocated nodes, which is done [here](https://github.com/Maldev-Academy/EntropyReducer/blob/main/PoC/EntropyReducer.c#L250).
+
+<br>
+
+### Decryption
+Decryption is handled by systemfunction033 and extracts the key from the payload. If you want to see a better implemtation of this method check out APCldr I nabbed it from the builder script there.
 
 <br>
 
