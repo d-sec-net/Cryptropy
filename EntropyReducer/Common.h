@@ -11,8 +11,8 @@
 //	- 'NULL_BYTES' should be at least 1
 
 #define BUFF_SIZE				0x04			// for every BUFF_SIZE bytes in the payload there will be NULL_BYTES bytes empty (0x00)
-#define NULL_BYTES				0x01			// change this value to further reduce the entropy (this add more size to the final payload) - the bigger the lower entropy
-
+#define NULL_BYTES				0x06	// change this value to further reduce the entropy (this add more size to the final payload) - the bigger the lower entropy
+#define KEY_SIZE				0x10 // Size of the Key to stick at the start of the payload.
 
 struct LINKED_LIST;
 typedef struct _LINKED_LIST
@@ -50,3 +50,5 @@ VOID MergeSort(PLINKED_LIST* top, enum SORT_TYPE eType);
 
 
 #endif // !HELPER_H
+
+
